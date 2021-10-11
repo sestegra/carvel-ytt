@@ -38,7 +38,7 @@ If you want to include those results, use the --output-files or --dangerous-empt
 	stderr := bytes.NewBufferString("")
 	ui := ui.NewCustomWriterTTY(false, stdout, stderr)
 	opts := cmdtpl.NewOptions()
-	rfsOpts := template.RegularFilesSourceOpts{OutputType: "yaml"}
+	rfsOpts := template.RegularFilesSourceOpts{OutputType: cmdtpl.OutputType{Outputs: []string{"yaml"}}}
 	rfs := template.NewRegularFilesSource(rfsOpts, ui)
 
 	out := opts.RunWithFiles(cmdtpl.Input{Files: filesToProcess}, ui)
@@ -74,7 +74,7 @@ organization=Acme Widgets Inc.`)
 	stderr := bytes.NewBufferString("")
 	ui := ui.NewCustomWriterTTY(false, stdout, stderr)
 	opts := cmdtpl.NewOptions()
-	rfsOpts := template.RegularFilesSourceOpts{OutputType: "yaml", OutputFiles: outputDir}
+	rfsOpts := template.RegularFilesSourceOpts{OutputType: cmdtpl.OutputType{Outputs: []string{"yaml"}}, OutputFiles: outputDir}
 	rfs := template.NewRegularFilesSource(rfsOpts, ui)
 
 	out := opts.RunWithFiles(cmdtpl.Input{Files: filesToProcess}, ui)
@@ -101,7 +101,7 @@ func Test_FileMark_YAML_Shows_No_Warning(t *testing.T) {
 	ui := ui.NewCustomWriterTTY(false, stdout, stderr)
 	opts := cmdtpl.NewOptions()
 	opts.FileMarksOpts.FileMarks = []string{"yaml.txt:type=yaml-plain"}
-	rfsOpts := template.RegularFilesSourceOpts{OutputType: "yaml"}
+	rfsOpts := template.RegularFilesSourceOpts{OutputType: cmdtpl.OutputType{Outputs: []string{"yaml"}}}
 	rfs := template.NewRegularFilesSource(rfsOpts, ui)
 
 	out := opts.RunWithFiles(cmdtpl.Input{Files: filesToProcess}, ui)
@@ -111,6 +111,41 @@ func Test_FileMark_YAML_Shows_No_Warning(t *testing.T) {
 	require.NoError(t, err)
 
 	assertStdoutAndStderr(t, stdout, stderr, expectedStdOut, expectedStdErr)
+}
+
+func Test_OutputType_Flag(t *testing.T) {
+
+	t.Run("is yaml", func(t *testing.T) {
+		opts := cmdtpl.NewOptions()
+		opts.RegularFilesSourceOpts.OutputType.Set([]string{"yaml"})
+		require.True(t, opts.RegularFilesSourceOpts.OutputType.IsYaml())
+		require.False(t, opts.RegularFilesSourceOpts.OutputType.IsJSON())
+		require.False(t, opts.RegularFilesSourceOpts.OutputType.IsPos())
+	})
+
+	t.Run("is json", func(t *testing.T) {
+		opts := cmdtpl.NewOptions()
+		opts.RegularFilesSourceOpts.OutputType.Set([]string{"json"})
+		require.False(t, opts.RegularFilesSourceOpts.OutputType.IsYaml())
+		require.True(t, opts.RegularFilesSourceOpts.OutputType.IsJSON())
+		require.False(t, opts.RegularFilesSourceOpts.OutputType.IsPos())
+	})
+
+	t.Run("is pos", func(t *testing.T) {
+		opts := cmdtpl.NewOptions()
+		opts.RegularFilesSourceOpts.OutputType.Set([]string{"pos"})
+		require.False(t, opts.RegularFilesSourceOpts.OutputType.IsYaml())
+		require.False(t, opts.RegularFilesSourceOpts.OutputType.IsJSON())
+		require.True(t, opts.RegularFilesSourceOpts.OutputType.IsPos())
+	})
+
+	t.Run("is not set", func(t *testing.T) {
+		opts := cmdtpl.NewOptions()
+		opts.RegularFilesSourceOpts.OutputType.Set([]string{""})
+		require.True(t, opts.RegularFilesSourceOpts.OutputType.IsYaml())
+		require.False(t, opts.RegularFilesSourceOpts.OutputType.IsJSON())
+		require.False(t, opts.RegularFilesSourceOpts.OutputType.IsPos())
+	})
 }
 
 func TestFileMarkMultipleExcludes(t *testing.T) {

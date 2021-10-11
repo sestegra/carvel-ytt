@@ -14,9 +14,10 @@ import (
 )
 
 const (
-	regularFilesOutputTypeYAML = "yaml"
-	regularFilesOutputTypeJSON = "json"
-	regularFilesOutputTypePos  = "pos"
+	regularFilesOutputTypeYAML    = "yaml"
+	regularFilesOutputTypeJSON    = "json"
+	regularFilesOutputTypePos     = "pos"
+	regularFilesOutputTypeOpenapi = "openapi-v3"
 )
 
 type RegularFilesSourceOpts struct {
@@ -24,9 +25,39 @@ type RegularFilesSourceOpts struct {
 
 	outputDir   string
 	OutputFiles string
-	OutputType  string
+	OutputType  OutputType
 
 	files.SymlinkAllowOpts
+}
+
+type OutputType struct {
+	Outputs []string
+}
+
+func (o *OutputType) Set(output []string) {
+	o.Outputs = output
+}
+
+func (o *OutputType) IsYaml() bool {
+	return !(o.IsJSON() || o.IsPos())
+}
+
+func (o *OutputType) IsJSON() bool {
+	for _, output := range o.Outputs {
+		if output == regularFilesOutputTypeJSON {
+			return true
+		}
+	}
+	return false
+}
+
+func (o *OutputType) IsPos() bool {
+	for _, output := range o.Outputs {
+		if output == regularFilesOutputTypePos {
+			return true
+		}
+	}
+	return false
 }
 
 func (s *RegularFilesSourceOpts) Set(cmd *cobra.Command) {
@@ -36,7 +67,7 @@ func (s *RegularFilesSourceOpts) Set(cmd *cobra.Command) {
 		"Delete given directory, and then create it with output files")
 	cmd.Flags().StringVar(&s.OutputFiles, "output-files", "", "Add output files to given directory")
 
-	cmd.Flags().StringVarP(&s.OutputType, "output", "o", regularFilesOutputTypeYAML, "Output type (yaml, json, pos)")
+	cmd.Flags().StringSliceP("output", "o", s.OutputType.Outputs, "Output type (yaml, json, pos)")
 
 	cmd.Flags().BoolVar(&s.SymlinkAllowOpts.AllowAll, "dangerous-allow-all-symlink-destinations", false,
 		"Symlinks to all destinations are allowed")
@@ -86,12 +117,12 @@ func (s *RegularFilesSource) Output(out Output) error {
 
 	var printerFunc func(io.Writer) yamlmeta.DocumentPrinter
 
-	switch s.opts.OutputType {
-	case regularFilesOutputTypeYAML:
+	switch  {
+	case s.opts.OutputType.IsYaml():
 		printerFunc = nil
-	case regularFilesOutputTypeJSON:
+	case s.opts.OutputType.IsJSON():
 		printerFunc = func(w io.Writer) yamlmeta.DocumentPrinter { return yamlmeta.NewJSONPrinter(w) }
-	case regularFilesOutputTypePos:
+	case s.opts.OutputType.IsPos():
 		printerFunc = func(w io.Writer) yamlmeta.DocumentPrinter {
 			return yamlmeta.WrappedFilePositionPrinter{yamlmeta.NewFilePositionPrinter(w)}
 		}

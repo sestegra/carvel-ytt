@@ -50,6 +50,13 @@ func NewOptions() *Options {
 	return &Options{}
 }
 
+func (o *Options) Validate() error {
+	if o.DataValuesFlags.InspectSchema {
+
+	}
+	return nil
+}
+
 func NewCmd(o *Options) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "template",
